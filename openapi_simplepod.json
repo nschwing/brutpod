@@ -1,0 +1,4087 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Simplepod.ai API",
+    "version": "latest",
+    "x-logo": {
+      "url": "/logo_ai.png"
+    },
+    "description": "# REST API\n\n## Overview\n\nThe API is based on REST principles. It supports GET, POST, PUT, PATCH and DELETE requests.\n\n## 📢 Join Our Community on Discord\n\nWe’ve set up a dedicated Discord channel for developers working with our API.  \nIt’s the best place to:\n\n- Ask questions and get support from the team\n- Share feedback and feature requests\n- Connect with other developers building on the API\n\n👉 [Click here to join the Discord channel](https://dash.simplepod.ai/discord)\n\n<!--\n## MCP (Model Context Protocol)\n\nUse AI assistants like Claude to manage your SimplePod instances directly via MCP.\n\n### Claude Code\n\n```bash\nclaude mcp add simplepod -- npx -y @simplepod.ai/mcp-rental\n```\n\n### Claude Desktop / manual config\n\nAdd to your MCP config (`.mcp.json` or `claude_desktop_config.json`):\n\n```json\n{\n    \"mcpServers\": {\n        \"simplepod\": {\n            \"command\": \"npx\",\n            \"args\": [\"-y\", \"@simplepod.ai/mcp-rental\"],\n            \"env\": {\n                \"API_TOKEN\": \"your-api-token\"\n            }\n        }\n    }\n}\n```\n\nGet your API token from your [SimplePod account settings](https://simplepod.ai).\n-->\n\n## Base URI\n\nAll URLs referenced in the documentation have the following base:\nhttps:\\/\\/api\\.simplepod\\.ai\n\n## Postman Collection\n\nYou can fork postman collection to your workspace and test the API via this link:\n\n[<img src=\"https://run.pstmn.io/button.svg\" alt=\"Run In Postman\" style=\"width: 128px; height: 32px;\">](https://www.postman.com/simplepod/simplepod-ai/collection/lun16qv/simplepod-ai-api)\n\n## Authentication\n\n<SecurityDefinitions />\n\n## Port Mapping\n\nWhen you rent a Docker instance, each exposed port receives two types of connections:\n\n- **Direct** — connect to the host IP and mapped port directly\n- **Proxy** — connect through a Cloudflare tunnel URL (HTTPS)\n\nPort mappings are returned in the `ports` field of instance API responses (`GET /instances/{id}`, `GET /instances/list`).\n\n### Container file\n\nInside the running container, port mappings are stored at:\n\n```\n/etc/simplepod/mapPortCfUser.json\n```\n\nExample contents:\n\n```json\n{\n  \"20000\": {\n    \"protocol\": \"http\",\n    \"proxyProtocol\": \"https\",\n    \"proxyUrl\": \"https://example.trycloudflare.com\",\n    \"service\": \"console\"\n  }\n}\n```\n\nEach key is the internal port number. Fields:\n- `protocol` — the protocol used for direct connections\n- `proxyProtocol` — the protocol used for proxied connections\n- `proxyUrl` — the full Cloudflare tunnel URL for this port\n- `service` — the service name (e.g. `console`, `ssh`, `jupyter`)\n"
+  },
+  "servers": [
+    {
+      "url": "https://api.simplepod.ai"
+    }
+  ],
+  "components": {
+    "schemas": {
+      "error": {
+        "$ref": "#/components/schemas/Error"
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "description": "Type of error",
+            "type": "string",
+            "x-nullable": false,
+            "example": "https://tools.ietf.org/html/rfc2616#section-10"
+          },
+          "title": {
+            "description": "Error title",
+            "type": "string",
+            "x-nullable": false,
+            "example": "An error occurred"
+          },
+          "detail": {
+            "description": "Error description",
+            "type": "string",
+            "x-nullable": false
+          }
+        }
+      }
+    },
+    "responses": {
+      "400": {
+        "description": "Bad Request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "401": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "properties": {
+                    "detail": {
+                      "example": "Invalid credentials."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "403": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "404": {
+        "description": "Not Found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Unprocessable Entity",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "423": {
+        "description": "Locked",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "responses-401": {
+        "description": "Unauthorized",
+        "content": {
+          "application/json": {
+            "schema": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Error"
+                },
+                {
+                  "properties": {
+                    "detail": {
+                      "example": "Invalid credentials."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "responses-403": {
+        "description": "Forbidden",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "responses-404": {
+        "description": "Not Found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-AUTH-TOKEN",
+        "description": "To call api methods you must provide api key.<br /> The api key is listed in Account Settings on Subaccouts tab.<br /> Each api key is assigned to subaccount and its permissions."
+      }
+    }
+  },
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
+  "paths": {
+    "/instances/market/list?rentalStatus=active": {
+      "get": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Find Instances",
+        "description": "Queries the GPU marketplace for available Docker rental hosts. Each variant represents a GPU configuration tier. The returned `instanceMarket` IRI is used as the reference when creating a new rental.",
+        "operationId": "getInstanceMarketCollection",
+        "parameters": [
+          {
+            "name": "order[gpuCount]",
+            "in": "query",
+            "description": "Order by GPUs",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[sla]",
+            "in": "query",
+            "description": "Order by availability",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[pricePerGpu]",
+            "in": "query",
+            "description": "Order by price",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[sysDlp]",
+            "in": "query",
+            "description": "Order by DLPerf",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[pricePerDlp]",
+            "in": "query",
+            "description": "Order by DLPerf/$/h",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[gpuTFlops]",
+            "in": "query",
+            "description": "Order by TFLOPs",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[pricePerTFlops]",
+            "in": "query",
+            "description": "Order by TFLOPs/$/h",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "Filter by region",
+            "example": "World",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "World",
+                "Asia",
+                "Europe",
+                "North America",
+                "Oceania",
+                "South America"
+              ]
+            }
+          },
+          {
+            "name": "downloadSpeedtest[gte]",
+            "in": "query",
+            "description": "Filter by download speedtest (greater or equal than): value from 1 to 16384",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "downloadSpeedtest[lte]",
+            "in": "query",
+            "description": "Filter by download speedtest (lower or equals than): value from 1 to 16384",
+            "example": 16384,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "uploadSpeedtest[gte]",
+            "in": "query",
+            "description": "Filter by upload speedtest (greater or equal than): value from 1 to 16384",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "uploadSpeedtest[lte]",
+            "in": "query",
+            "description": "Filter by upload speedtest (lower or equals than): value from 1 to 16384",
+            "example": 16384,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "diskSize[gte]",
+            "in": "query",
+            "description": "Filter by disk space GB (greater or equal than): value from 32 to 65536",
+            "example": 32,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "diskSize[lte]",
+            "in": "query",
+            "description": "Filter by disk space GB (lower or equals than): value from 32 to 65536",
+            "example": 65536,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cpuCoreCount[gte]",
+            "in": "query",
+            "description": "Filter by CPU cores (greater or equal than): value from 1 to 512",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cpuCoreCount[lte]",
+            "in": "query",
+            "description": "Filter by CPU cores (lower or equals than): value from 1 to 512",
+            "example": 512,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "systemMemory[gte]",
+            "in": "query",
+            "description": "Filter by system memory MB (greater or equal than): value from 4096 to 8388608",
+            "example": 4096,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "systemMemory[lte]",
+            "in": "query",
+            "description": "Filter by system memory MB (lower or equals than): value from 4096 to 8388608",
+            "example": 8388608,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "diskSpeedWrite[gte]",
+            "in": "query",
+            "description": "Filter by disk speed MB/s (greater or equal than): value from 1 to 131072",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "diskSpeedWrite[lte]",
+            "in": "query",
+            "description": "Filter by disk speed MB/s (lower or equals than): value from 1 to 131072",
+            "example": 131072,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuModel",
+            "in": "query",
+            "description": "Filter by GPU Model",
+            "example": "Any",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Any",
+                "RTX PRO 6000 Blackwell",
+                "RTX 5090",
+                "RTX 5060 Ti",
+                "RTX 4090",
+                "RTX 4070",
+                "RTX 4060 Ti",
+                "RTX 3060",
+                "RTX 3070",
+                "RTX A2000",
+                "RTX A4000",
+                "RTX 3090",
+                "RTX PRO 6000 MIG 2g.48gb",
+                "RTX 4070"
+              ]
+            }
+          },
+          {
+            "name": "gpuCount[gte]",
+            "in": "query",
+            "description": "Filter by GPU count (greater or equal than): value from 1 to 16",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuCount[lte]",
+            "in": "query",
+            "description": "Filter by GPU count (lower or equals than): value from 1 to 16",
+            "example": 16,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuTFlops[gte]",
+            "in": "query",
+            "description": "Filter by TFLOPS total (greater or equal than): value from 1 to 256",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuTFlops[lte]",
+            "in": "query",
+            "description": "Filter by TFLOPS total (lower or equals than): value from 1 to 256",
+            "example": 256,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuMemorySize[gte]",
+            "in": "query",
+            "description": "Filter by GPU Memory size MB (greater or equal than): value from 8192 to 524288",
+            "example": 8192,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuMemorySize[lte]",
+            "in": "query",
+            "description": "Filter by GPU Memory size MB (lower or equals than): value from 8192 to 524288",
+            "example": 524288,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuPcieBandwidth[gte]",
+            "in": "query",
+            "description": "Filter by PCI-E bandwidth GBit/s (greater or equal than): value from 1 to 128",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuPcieBandwidth[lte]",
+            "in": "query",
+            "description": "Filter by PCI-E bandwidth GBit/s (lower or equals than): value from 1 to 128",
+            "example": 128,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuDriverVer",
+            "in": "query",
+            "description": "Filter by Driver version",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gpuDriverVerComparisonOperator",
+            "in": "query",
+            "description": "Filter by Driver version - comparison method",
+            "example": "=",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "=",
+                "<=",
+                ">="
+              ]
+            }
+          },
+          {
+            "name": "gpuCudaVer",
+            "in": "query",
+            "description": "Filter by CUDA version",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "gpuCudaVerOperator",
+            "in": "query",
+            "description": "Filter by CUDA version - comparison method",
+            "example": "=",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "=",
+                "<=",
+                ">="
+              ]
+            }
+          },
+          {
+            "name": "rentalStatus",
+            "in": "query",
+            "description": "Filter by Rental status: <br />Any <br />active - Available for rent <br />inactive - Rented",
+            "example": "Any",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Any",
+                "active",
+                "inactive"
+              ]
+            }
+          },
+          {
+            "name": "sla[gte]",
+            "in": "query",
+            "description": "Filter by uptime % (greater or equal than): value from 1 to 100",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "sla[lte]",
+            "in": "query",
+            "description": "Filter by uptime % (lower or equals than): value from 1 to 100",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "rentalTimeMin[gte]",
+            "in": "query",
+            "description": "Filter by min duration h (greater or equal than): value from 1 to 8600",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "rentalTimeMin[lte]",
+            "in": "query",
+            "description": "Filter by min duration h (lower or equals than): value from 1 to 8600",
+            "example": 8600,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerGpu[gte]",
+            "in": "query",
+            "description": "Filter by price $/hour (greater or equal than): value from 0 to 5",
+            "example": 0,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerGpu[lte]",
+            "in": "query",
+            "description": "Filter by price $/hour (lower or equals than): value from 0 to 5",
+            "example": 5,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerTFlops[gte]",
+            "in": "query",
+            "description": "Filter by price TFLOPS/$/hour (greater or equal than): value from 0 to 200",
+            "example": 0,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerTFlops[lte]",
+            "in": "query",
+            "description": "Filter by price TFLOPS/$/hour (lower or equals than): value from 0 to 200",
+            "example": 200,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerDlp[gte]",
+            "in": "query",
+            "description": "Filter by price DLP/$/hour (greater or equal than): value from 0 to 200",
+            "example": 0,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerDlp[lte]",
+            "in": "query",
+            "description": "Filter by price DLP/$/hour (lower or equals than): value from 0 to 200",
+            "example": 200,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "instanceMarket": {
+                        "type": "string",
+                        "example": "/instances/market/1"
+                      },
+                      "cpuCoreCount": {
+                        "type": "integer"
+                      },
+                      "cpuModel": {
+                        "type": "string"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "diskSpeedRead": {
+                        "type": "integer"
+                      },
+                      "diskSpeedWrite": {
+                        "type": "integer"
+                      },
+                      "diskType": {
+                        "type": "string"
+                      },
+                      "downloadSpeedtest": {
+                        "type": "integer"
+                      },
+                      "errors": {
+                        "type": "array",
+                        "items": {}
+                      },
+                      "gpuCount": {
+                        "type": "integer"
+                      },
+                      "gpuCudaVer": {
+                        "type": "string"
+                      },
+                      "gpuDriverVer": {
+                        "type": "string"
+                      },
+                      "gpuMemorySize": {
+                        "type": "integer"
+                      },
+                      "gpuModel": {
+                        "type": "string"
+                      },
+                      "gpuPcieBandwidth": {
+                        "type": "integer"
+                      },
+                      "gpuPcieGen": {
+                        "type": "integer"
+                      },
+                      "gpuPcieWidth": {
+                        "type": "integer"
+                      },
+                      "gpuTFlops": {
+                        "type": "integer"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "isAvailableForDemand": {
+                        "type": "boolean"
+                      },
+                      "isAvailableForInterruptible": {
+                        "type": "boolean"
+                      },
+                      "pricePerDiskSize": {
+                        "type": "number"
+                      },
+                      "pricePerDlp": {
+                        "type": "number"
+                      },
+                      "pricePerGpu": {
+                        "type": "number"
+                      },
+                      "pricePerTFlops": {
+                        "type": "number"
+                      },
+                      "rentalTimeMax": {
+                        "type": "integer"
+                      },
+                      "sla": {
+                        "type": "number"
+                      },
+                      "sysDlp": {
+                        "type": "integer"
+                      },
+                      "systemMemory": {
+                        "type": "integer"
+                      },
+                      "uploadSpeedtest": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/market/list?rentalStatus=active' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/market/list?rentalStatus=active',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/market/list?mode=vm&rentalStatus=active": {
+      "get": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "VPS list",
+        "description": "Queries the GPU marketplace for available VPS rental hosts. Each variant represents a GPU configuration tier. The returned `instanceMarket` IRI is used when creating a new VPS rental and in resume rental requests.",
+        "operationId": "getInstanceMarketVMCollection",
+        "parameters": [
+          {
+            "name": "order[gpuCount]",
+            "in": "query",
+            "description": "Order by GPUs",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[sla]",
+            "in": "query",
+            "description": "Order by availability",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "order[pricePerGpu]",
+            "in": "query",
+            "description": "Order by price",
+            "example": "desc",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "region",
+            "in": "query",
+            "description": "Filter by region",
+            "example": "World",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "World",
+                "Asia",
+                "Europe",
+                "North America",
+                "Oceania",
+                "South America"
+              ]
+            }
+          },
+          {
+            "name": "gpuModel",
+            "in": "query",
+            "description": "Filter by GPU Model",
+            "example": "Any",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Any",
+                "RTX PRO 6000 Blackwell",
+                "RTX 5090",
+                "RTX 5060 Ti",
+                "RTX 4090",
+                "RTX 4070",
+                "RTX 4060 Ti",
+                "RTX 3060",
+                "RTX 3070",
+                "RTX A2000",
+                "RTX A4000",
+                "RTX 3090",
+                "RTX PRO 6000 MIG 2g.48gb",
+                "RTX 4070"
+              ]
+            }
+          },
+          {
+            "name": "gpuCount[gte]",
+            "in": "query",
+            "description": "Filter by GPU count (greater or equal than): value from 1 to 16",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "gpuCount[lte]",
+            "in": "query",
+            "description": "Filter by GPU count (lower or equals than): value from 1 to 16",
+            "example": 16,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "rentalStatus",
+            "in": "query",
+            "description": "Filter by Rental status: <br />Any <br />active - Available for rent <br />inactive - Rented",
+            "example": "Any",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "Any",
+                "active",
+                "inactive"
+              ]
+            }
+          },
+          {
+            "name": "sla[gte]",
+            "in": "query",
+            "description": "Filter by uptime % (greater or equal than): value from 1 to 100",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "sla[lte]",
+            "in": "query",
+            "description": "Filter by uptime % (lower or equals than): value from 1 to 100",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerGpu[gte]",
+            "in": "query",
+            "description": "Filter by price $/hour (greater or equal than): value from 0 to 5",
+            "example": 0,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "pricePerGpu[lte]",
+            "in": "query",
+            "description": "Filter by price $/hour (lower or equals than): value from 0 to 5",
+            "example": 5,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "instanceMarket": {
+                        "type": "string",
+                        "example": "/instances/market/1"
+                      },
+                      "cpuCoreCount": {
+                        "type": "integer"
+                      },
+                      "cpuModel": {
+                        "type": "string"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "diskSpeedRead": {
+                        "type": "integer"
+                      },
+                      "diskSpeedWrite": {
+                        "type": "integer"
+                      },
+                      "diskType": {
+                        "type": "string"
+                      },
+                      "downloadSpeedtest": {
+                        "type": "integer"
+                      },
+                      "errors": {
+                        "type": "array",
+                        "items": {}
+                      },
+                      "gpuCount": {
+                        "type": "integer"
+                      },
+                      "gpuCudaVer": {
+                        "type": "string"
+                      },
+                      "gpuDriverVer": {
+                        "type": "string"
+                      },
+                      "gpuMemorySize": {
+                        "type": "integer"
+                      },
+                      "gpuModel": {
+                        "type": "string"
+                      },
+                      "gpuPcieBandwidth": {
+                        "type": "integer"
+                      },
+                      "gpuPcieGen": {
+                        "type": "integer"
+                      },
+                      "gpuPcieWidth": {
+                        "type": "integer"
+                      },
+                      "gpuTFlops": {
+                        "type": "integer"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "isAvailableForDemand": {
+                        "type": "boolean"
+                      },
+                      "isAvailableForInterruptible": {
+                        "type": "boolean"
+                      },
+                      "pricePerDiskSize": {
+                        "type": "number"
+                      },
+                      "pricePerDlp": {
+                        "type": "number"
+                      },
+                      "pricePerGpu": {
+                        "type": "number"
+                      },
+                      "pricePerTFlops": {
+                        "type": "number"
+                      },
+                      "rentalTimeMax": {
+                        "type": "integer"
+                      },
+                      "sla": {
+                        "type": "number"
+                      },
+                      "sysDlp": {
+                        "type": "integer"
+                      },
+                      "systemMemory": {
+                        "type": "integer"
+                      },
+                      "uploadSpeedtest": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/market/list?mode=vm&rentalStatus=active' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/market/list?mode=vm&rentalStatus=active',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/global-templates/list": {
+      "get": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Global templates",
+        "description": "Returns the catalog of publicly available Docker image templates. These are pre-configured templates (e.g., Ubuntu, PyTorch) with predefined disk size, exposed ports, start scripts, and environment variables. Used as the basis for creating private template groups or directly when renting a Docker instance.",
+        "operationId": "getInstanceGlobalTemplateCollection",
+        "parameters": [
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by search phrase",
+            "example": "ubuntu",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "imageName": {
+                        "type": "string"
+                      },
+                      "categoryName": {
+                        "type": "string"
+                      },
+                      "defaultTag": {
+                        "type": "string"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "exposePorts": {
+                        "type": "string"
+                      },
+                      "startScript": {
+                        "type": "string"
+                      },
+                      "argOptions": {
+                        "type": "array",
+                        "items": {}
+                      },
+                      "envVariables": {
+                        "type": "array",
+                        "items": {}
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "isPublic": {
+                        "type": "boolean"
+                      },
+                      "isRunSshServerOn": {
+                        "type": "boolean"
+                      },
+                      "isRunJupyterOn": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/global-templates/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/global-templates/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/global-templates/{id}": {
+      "get": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Global template details",
+        "description": "Returns full details of a global Docker image template including image configuration, start script, ARG/ENV variables, and feature options (SSH server, Jupyter).",
+        "operationId": "getInstanceGlobalTemplateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Template ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "imageName": {
+                      "type": "string"
+                    },
+                    "categoryName": {
+                      "type": "string"
+                    },
+                    "defaultTag": {
+                      "type": "string"
+                    },
+                    "diskSize": {
+                      "type": "integer"
+                    },
+                    "exposePorts": {
+                      "type": "string"
+                    },
+                    "startScript": {
+                      "type": "string"
+                    },
+                    "argOptions": {
+                      "type": "array",
+                      "items": {}
+                    },
+                    "envVariables": {
+                      "type": "array",
+                      "items": {}
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "host": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    },
+                    "isPublic": {
+                      "type": "boolean"
+                    },
+                    "isPasswordProtected": {
+                      "type": "boolean"
+                    },
+                    "isRunSshServerOn": {
+                      "type": "boolean"
+                    },
+                    "isRunJupyterOn": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "$ref": "#/components/responses/responses-403"
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/global-templates/1' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/global-templates/1',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/templates/list": {
+      "get": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Private Template Groups",
+        "description": "Returns the authenticated user's private Docker image template groups. These are customized versions of global templates or entirely custom Docker images with private registry credentials. Each template group defines the container configuration (image, tag, disk size, ports, SSH, Jupyter) used when renting instances.",
+        "operationId": "getInstanceTemplateCollection",
+        "parameters": [
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by search phrase",
+            "example": "ubuntu",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "imageName": {
+                        "type": "string"
+                      },
+                      "categoryName": {
+                        "type": "string"
+                      },
+                      "defaultTag": {
+                        "type": "string"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "exposePorts": {
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "isPasswordProtected": {
+                        "type": "boolean"
+                      },
+                      "isRunSshServerOn": {
+                        "type": "boolean"
+                      },
+                      "isRunJupyterOn": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/templates/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/templates/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/templates": {
+      "post": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Add Private Template Group",
+        "description": "Creates a new private Docker image template group. Allows specifying a custom Docker image with optional private registry authentication (host, username, password), disk size allocation, exposed ports, start script, ARG options, ENV variables, and feature toggles (SSH server, Jupyter). The template is private to the authenticated user and can be used when renting Docker instances.",
+        "operationId": "postInstanceTemplateItem",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "description": "Host of private docker hub",
+                    "type": "string",
+                    "example": "https://hub.docker.com"
+                  },
+                  "username": {
+                    "description": "Username of private docker hub",
+                    "type": "string",
+                    "example": "simplepod"
+                  },
+                  "password": {
+                    "description": "password of private docker hub",
+                    "type": "string",
+                    "example": "password"
+                  },
+                  "name": {
+                    "description": "Name of template",
+                    "type": "string",
+                    "example": "ubuntu"
+                  },
+                  "imageName": {
+                    "description": "Name of image",
+                    "type": "string",
+                    "example": "ubuntu"
+                  },
+                  "categoryName": {
+                    "description": "Category of image",
+                    "type": "number",
+                    "example": "ubuntu"
+                  },
+                  "defaultTag": {
+                    "description": "Tag of image",
+                    "type": "number",
+                    "example": "latest"
+                  },
+                  "diskSize": {
+                    "description": "Size of instances created with this template",
+                    "type": "integer",
+                    "example": 32
+                  },
+                  "exposePorts": {
+                    "description": "Provide comma separated port numbers",
+                    "type": "string",
+                    "example": "22,80,443"
+                  },
+                  "startScript": {
+                    "description": "Autostart bash script",
+                    "type": "string"
+                  },
+                  "argOptions": {
+                    "description": "Docker image ARG",
+                    "type": "string"
+                  },
+                  "envVariables": {
+                    "description": "ENV variables",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "example": "ENV1"
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "VALUE1"
+                        }
+                      }
+                    },
+                    "example": [
+                      {
+                        "name": "ENV1",
+                        "value": "VALUE1"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "description": "Notes",
+                    "type": "string"
+                  },
+                  "isPasswordProtected": {
+                    "description": "Custom repository server",
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "isRunSshServerOn": {
+                    "description": "SSH server",
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "isRunJupyterOn": {
+                    "description": "Jupyter Notebook",
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request POST 'https://api.simplepod.ai/instances/templates' \\\n--header 'Content-Type: application/json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n    \"host\": null,\n    \"username\": null,\n    \"password\": null,\n    \"name\": \"ubuntu\",\n    \"imageName\": \"ubuntu\",\n    \"categoryName\": \"ubuntu\",\n    \"defaultTag\": \"jammy-20240427\",\n    \"diskSize\": 31,\n    \"exposePorts\": \"\",\n    \"startScript\": \"\",\n    \"argOptions\": null,\n    \"envVariables\": [],\n    \"notes\": \"\",\n    \"isPasswordProtected\": false,\n    \"isRunSshServerOn\": true,\n    \"isRunJupyterOn\": true\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n$data = [\n    'host' => null,\n    'username' => null,\n    'password' => null,\n    'name' => 'ubuntu',\n    'imageName' => 'ubuntu',\n    'categoryName' => 'ubuntu',\n    'defaultTag' => 'jammy-20240427',\n    'diskSize' => 31,\n    'exposePorts' => '',\n    'startScript' => '',\n    'argOptions' => null,\n    'envVariables' => [],\n    'notes' => '',\n    'isPasswordProtected' => false,\n    'isRunSshServerOn' => true,\n    'isRunJupyterOn' => true,\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances/templates',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'POST',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/templates/{id}": {
+      "get": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Private Template Group details",
+        "description": "Returns full details of a private template group including Docker registry host, credentials, image configuration, start script, ARG/ENV variables, and feature flags. Only accessible by the template owner.",
+        "operationId": "getInstanceTemplateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Template ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "imageName": {
+                      "type": "string"
+                    },
+                    "categoryName": {
+                      "type": "string"
+                    },
+                    "defaultTag": {
+                      "type": "string"
+                    },
+                    "diskSize": {
+                      "type": "integer"
+                    },
+                    "exposePorts": {
+                      "type": "string"
+                    },
+                    "startScript": {
+                      "type": "string"
+                    },
+                    "argOptions": {
+                      "type": "array",
+                      "items": {}
+                    },
+                    "envVariables": {
+                      "type": "array",
+                      "items": {}
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "host": {
+                      "type": "string"
+                    },
+                    "username": {
+                      "type": "string"
+                    },
+                    "password": {
+                      "type": "string"
+                    },
+                    "isPublic": {
+                      "type": "boolean"
+                    },
+                    "isPasswordProtected": {
+                      "type": "boolean"
+                    },
+                    "isRunSshServerOn": {
+                      "type": "boolean"
+                    },
+                    "isRunJupyterOn": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "$ref": "#/components/responses/responses-403"
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/templates/1' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/templates/1',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Update Private Template Group",
+        "description": "Updates a private Docker image template group's configuration. Can modify the Docker registry host and credentials, image name and tag, disk size, exposed ports, start script, ARG/ENV variables, notes, and feature toggles (password protection, SSH server, Jupyter). Changes apply to future instance creations using this template.",
+        "operationId": "putInstanceTemplateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "description": "Host of private docker hub",
+                    "type": "string",
+                    "example": "https://hub.docker.com"
+                  },
+                  "username": {
+                    "description": "Username of private docker hub",
+                    "type": "string",
+                    "example": "simplepod"
+                  },
+                  "password": {
+                    "description": "password of private docker hub",
+                    "type": "string",
+                    "example": "password"
+                  },
+                  "name": {
+                    "description": "Name of template",
+                    "type": "string",
+                    "example": "ubuntu"
+                  },
+                  "imageName": {
+                    "description": "Name of image",
+                    "type": "string",
+                    "example": "ubuntu"
+                  },
+                  "categoryName": {
+                    "description": "Category of image",
+                    "type": "number",
+                    "example": "ubuntu"
+                  },
+                  "defaultTag": {
+                    "description": "Tag of image",
+                    "type": "number",
+                    "example": "latest"
+                  },
+                  "diskSize": {
+                    "description": "Size of instances created with this template",
+                    "type": "integer",
+                    "example": 32
+                  },
+                  "exposePorts": {
+                    "description": "Provide comma separated port numbers",
+                    "type": "string",
+                    "example": "22,80,443"
+                  },
+                  "startScript": {
+                    "description": "Autostart bash script",
+                    "type": "number"
+                  },
+                  "argOptions": {
+                    "description": "Docker image ARG",
+                    "type": "string"
+                  },
+                  "envVariables": {
+                    "description": "ENV variables",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "example": "ENV1"
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "VALUE1"
+                        }
+                      }
+                    },
+                    "example": [
+                      {
+                        "name": "ENV1",
+                        "value": "VALUE1"
+                      }
+                    ]
+                  },
+                  "notes": {
+                    "description": "Notes",
+                    "type": "string"
+                  },
+                  "isPasswordProtected": {
+                    "description": "Custom repository server",
+                    "type": "boolean",
+                    "example": false
+                  },
+                  "isRunSshServerOn": {
+                    "description": "SSH server",
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "isRunJupyterOn": {
+                    "description": "Jupyter Notebook",
+                    "type": "boolean",
+                    "example": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request PUT 'https://api.simplepod.ai/instances/templates/1' \\\n--header 'Content-Type: application/json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n    \"host\": null,\n    \"username\": null,\n    \"password\": null,\n    \"name\": \"ubuntu\",\n    \"imageName\": \"ubuntu\",\n    \"categoryName\": \"ubuntu\",\n    \"defaultTag\": \"jammy-20240427\",\n    \"diskSize\": 31,\n    \"exposePorts\": \"\",\n    \"startScript\": \"\",\n    \"argOptions\": null,\n    \"envVariables\": [],\n    \"notes\": \"\",\n    \"isPasswordProtected\": false,\n    \"isRunSshServerOn\": true,\n    \"isRunJupyterOn\": true\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n$data = [\n    'host' => null,\n    'username' => null,\n    'password' => null,\n    'name' => 'ubuntu',\n    'imageName' => 'ubuntu',\n    'categoryName' => 'ubuntu',\n    'defaultTag' => 'jammy-20240427',\n    'diskSize' => 31,\n    'exposePorts' => '',\n    'startScript' => '',\n    'argOptions' => null,\n    'envVariables' => [],\n    'notes' => '',\n    'isPasswordProtected' => false,\n    'isRunSshServerOn' => true,\n    'isRunJupyterOn' => true,\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances/templates/1',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'PUT',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Delete Private Template Group",
+        "description": "Deletes a private Docker image template group. Only the template owner can delete it.",
+        "operationId": "deleteTemplateItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Instance ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "$ref": "#/components/responses/responses-403"
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request DELETE 'https://api.simplepod.ai/instances/templates/1' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/templates/1',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'DELETE',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/images/list": {
+      "get": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "Images List",
+        "description": "Returns available VPS operating system images (e.g., Ubuntu, Windows). Each image specifies a minimum disk size requirement (`diskSizeMin`) that the selected host must meet. The image IRI is required when renting a new VPS instance.",
+        "operationId": "getInstanceVMImagesCollection",
+        "parameters": [
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by search phrase",
+            "example": "ubuntu",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "diskSizeMin": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/templates/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/templates/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances": {
+      "post": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Rent Instance",
+        "description": "Creates a new Docker rental instance on the selected host. Validates balance and availability. Supports batch creation via `numOfInstances`.",
+        "operationId": "postInstanceItem",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "gpuCount": {
+                    "description": "Number of GPUs",
+                    "type": "integer",
+                    "example": 1
+                  },
+                  "instanceMarket": {
+                    "description": "IRI of instance market. Obtain from GET /instances/market/list?mode=docker&rentalStatus=active",
+                    "type": "string",
+                    "example": "/instances/market/1",
+                    "required": true
+                  },
+                  "instanceTemplate": {
+                    "description": "IRI of template group",
+                    "type": "string",
+                    "example": "/instances/templates/38",
+                    "required": true
+                  },
+                  "startScript": {
+                    "description": "Autostart bash script",
+                    "type": "string"
+                  },
+                  "envVariables": {
+                    "description": "ENV variables",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "example": "ENV1"
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "VALUE1"
+                        }
+                      }
+                    },
+                    "example": [
+                      {
+                        "name": "ENV1",
+                        "value": "VALUE1"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request POST 'https://api.simplepod.ai/instances' \\\n--header 'Content-Type: application/json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n   \"gpuCount\": 1,\n   \"instanceMarket\": \"/instances/market/1\",\n   \"instanceTemplate\": \"/instances/templates/38\"\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\n$apiKey = ''; // Replace with your API key\n\n// 1. We must obtain the list of available VM rental instances to provide instanceMarket\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/market/list?mode=vm&rentalStatus=active',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => [\"X-AUTH-TOKEN: {$apiKey}\"],\n]);\n\n$response = curl_exec($curl);\n\n$instanceMarketId = json_decode($response, true, 512, JSON_THROW_ON_ERROR)[0]['id'] ?? null;\n$instanceTemplateId = 29; // Replace with a valid instance template ID\n\nif (null === $instanceMarketId) {\n    throw new RuntimeException('No available VM rental instances found.');\n}\n\n$data = [\n    'instanceMarket' => \"/instances/market/{$instanceMarketId}\",\n    'instanceTemplate' => \"/instances/templates/{$instanceTemplateId}\",\n    'envVariables' => [['name' => 'ENV1', 'value' => 'VALUE1']],\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'POST',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => [\"X-AUTH-TOKEN: {$apiKey}\"],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances?mode=vm": {
+      "post": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "Rent VPS",
+        "description": "Creates a new VPS rental instance. Validates balance and availability before proceeding.\n\n**Linux-based images:** Provide `userSshKey` with an IRI of a saved SSH key or a raw public SSH key. If a raw key is provided, it is saved automatically. Optionally set `userSshKeyName` to name the saved key.\n\n**Windows-based images:** Provide `password` instead of an SSH key.",
+        "operationId": "postInstanceVMItem",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instanceMarket": {
+                    "description": "IRI of instance market. Obtain from GET /instances/market/list?mode=vm&rentalStatus=active",
+                    "type": "string",
+                    "example": "/instances/market/1",
+                    "required": true
+                  },
+                  "instanceVmImage": {
+                    "description": "IRI of VM image",
+                    "type": "string",
+                    "example": "/instances/images/29",
+                    "required": true
+                  },
+                  "userSshKey": {
+                    "description": "IRI of user SSH key or raw public SSH key (required for Linux images)",
+                    "type": "string",
+                    "example": "/user-ssh-keys/1"
+                  },
+                  "userSshKeyName": {
+                    "description": "Name to save for the public SSH key (optional, used with Linux images)",
+                    "type": "string",
+                    "example": "My SSH Key"
+                  },
+                  "password": {
+                    "description": "Password for the VPS instance (required for Windows images)",
+                    "type": "string",
+                    "example": "MySecurePassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request POST 'https://api.simplepod.ai/instances' \\\n--header 'Content-Type: application/json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n   \"gpuCount\": 1,\n   \"instanceMarket\": \"/instances/market/1\",\n   \"instanceVmImage\": \"/instances/images/29\"\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\n$apiKey = ''; // Replace with your API key\n\n// 1. We must obtain the list of available VM rental instances to provide instanceMarket\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/market/list?mode=vm&rentalStatus=active',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => [\"X-AUTH-TOKEN: {$apiKey}\"],\n]);\n\n$response = curl_exec($curl);\n\n$instanceMarketId = json_decode($response, true, 512, JSON_THROW_ON_ERROR)[0]['id'] ?? null;\n$instanceImageId = 29; // Replace with a valid instance image ID\n$userSshKeyId = 5; // Replace with a valid user SSH key ID\n\nif (null === $instanceMarketId) {\n    throw new RuntimeException('No available VM rental instances found.');\n}\n\n// 2. Now we can create a new VM rental instance\n$data = [\n    'instanceMarket' => \"/instances/market/{$instanceMarketId}\",\n    'instanceVmImage' => \"/instances/images/{$instanceImageId}\",\n    'userSshKey' => \"/user-ssh-keys/{$userSshKeyId}\",\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'POST',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => [\"X-AUTH-TOKEN: {$apiKey}\"],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances?mode=vm-resume": {
+      "post": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "Resume VPS",
+        "description": "Resumes a previously paused VPS instance on a new host. The instance retains its configuration, SSH key, and IP address. Can be referenced by instance IRI or support ID (e.g., 'V_abcd'). Validates balance and host availability before proceeding.",
+        "operationId": "postInstanceVMResumeItem",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instanceMarket": {
+                    "description": "IRI of instance market. Obtain from GET /instances/market/list?mode=vm&rentalStatus=active",
+                    "type": "string",
+                    "example": "/instances/market/1",
+                    "required": true
+                  },
+                  "instance": {
+                    "description": "IRI of paused instance or support ID",
+                    "type": "string",
+                    "example": "V_abcd",
+                    "required": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request POST 'https://api.simplepod.ai/instances' \\\n--header 'Content-Type: application/json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n   \"instanceMarket\": \"/instances/market/1\",\n   \"instance\": \"V_abcd\" // provide supportId of instance to resume\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\n$apiKey = ''; // Replace it with your API key\n\n// 1. We must obtain the list of available VM rental instances to provide instanceMarket\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/market/list?mode=vm&rentalStatus=active',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => [\"X-AUTH-TOKEN: {$apiKey}\"],\n]);\n\n$response = curl_exec($curl);\n\n$instanceMarketId = json_decode($response, true, 512, JSON_THROW_ON_ERROR)[0]['id'] ?? null;\n$instanceId = '/instances/3'; // Replace it with a valid instance ID or supportId\n//$instanceId = 'V_abcd'; // You can also use supportIds\n\nif (null === $instanceMarketId) {\n    throw new RuntimeException('No available VM rental instances found.');\n}\n\n// 2. Now we can resume a paused VM rental instance\n$data = [\n    'instanceMarket' => \"/instances/market/{$instanceMarketId}\",\n    'instance' => $instanceId,\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'POST',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => [\"X-AUTH-TOKEN: {$apiKey}\"],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/list": {
+      "get": {
+        "tags": [
+          "Rent Docker",
+          "Rent VPS"
+        ],
+        "summary": "Instances list",
+        "description": "Returns the authenticated user's rental instances (both Docker and VPS). Each instance includes real-time stats such as CPU/memory/disk usage and process uptime. Supports pagination and search filtering by name or template.",
+        "operationId": "getInstanceCollection",
+        "parameters": [
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by search phrase",
+            "example": "ubuntu",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "hashId": {
+                        "type": "string",
+                        "description": "Unique instance hash. For Docker instances this value is also the password used for SSH and console access."
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "gpuModel": {
+                        "type": "string"
+                      },
+                      "gpuMemorySize": {
+                        "type": "integer"
+                      },
+                      "gpuCount": {
+                        "type": "integer"
+                      },
+                      "cpuCoreCount": {
+                        "type": "number"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "deleted",
+                          "created",
+                          "exited",
+                          "paused",
+                          "restarting",
+                          "running",
+                          "removing"
+                        ]
+                      },
+                      "duration": {
+                        "type": "integer"
+                      },
+                      "rentalType": {
+                        "type": "string",
+                        "enum": [
+                          "demand"
+                        ]
+                      },
+                      "pricePerGpu": {
+                        "type": "number"
+                      },
+                      "pricePerDiskSize": {
+                        "type": "number"
+                      },
+                      "priceAutoRenewMax": {
+                        "type": "number"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "autoRenewAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "isAutoRenewOn": {
+                        "type": "boolean"
+                      },
+                      "ports": {
+                        "type": "object",
+                        "description": "Port mapping for the instance. Direct ports use the host IP; proxy ports use Cloudflare tunnel URLs.",
+                        "properties": {
+                          "direct": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "srcPort": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ],
+                                  "description": "Source port inside the container"
+                                },
+                                "destPort": {
+                                  "type": "string",
+                                  "description": "Destination port on the host"
+                                },
+                                "ip": {
+                                  "type": "string",
+                                  "description": "Host IP address for direct connection"
+                                },
+                                "protocol": {
+                                  "type": "string",
+                                  "description": "Connection protocol (e.g. http, https, unknown)"
+                                },
+                                "service": {
+                                  "type": "string",
+                                  "description": "Service name (e.g. console, ssh, jupyter)"
+                                }
+                              }
+                            }
+                          },
+                          "proxy": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "srcPort": {
+                                  "oneOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "integer"
+                                    }
+                                  ],
+                                  "description": "Source port inside the container"
+                                },
+                                "protocol": {
+                                  "type": "string",
+                                  "description": "Connection protocol (e.g. https, closed)"
+                                },
+                                "url": {
+                                  "type": "string",
+                                  "description": "Cloudflare tunnel URL, or \"closed\" if unavailable"
+                                },
+                                "service": {
+                                  "type": "string",
+                                  "description": "Service name (e.g. console, ssh, jupyter)"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "cpuUsage": {
+                        "type": "integer"
+                      },
+                      "memUsage": {
+                        "type": "integer"
+                      },
+                      "diskUsage": {
+                        "type": "integer"
+                      },
+                      "processUptime": {
+                        "type": "integer"
+                      },
+                      "console": {
+                        "type": "string"
+                      },
+                      "consoleSystem": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/{id}": {
+      "get": {
+        "tags": [
+          "Rent Docker",
+          "Rent VPS"
+        ],
+        "summary": "Instance details",
+        "description": "Returns detailed information about a specific rental instance, including real-time GPU telemetry and recent errors and warnings.",
+        "operationId": "getInstanceItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Instance ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer"
+                    },
+                    "hashId": {
+                      "type": "string",
+                      "description": "Unique instance hash. For Docker instances this value is also the password used for SSH and console access."
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "gpuModel": {
+                      "type": "string"
+                    },
+                    "gpuMemorySize": {
+                      "type": "integer"
+                    },
+                    "gpuCount": {
+                      "type": "integer"
+                    },
+                    "cpuCoreCount": {
+                      "type": "number"
+                    },
+                    "systemMemory": {
+                      "type": "integer"
+                    },
+                    "diskSize": {
+                      "type": "integer"
+                    },
+                    "diskSizeMax": {
+                      "type": "integer"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "created",
+                        "dead",
+                        "exited",
+                        "paused",
+                        "removing",
+                        "restarting",
+                        "running",
+                        "deleted"
+                      ]
+                    },
+                    "duration": {
+                      "type": "integer"
+                    },
+                    "rentalType": {
+                      "type": "string",
+                      "enum": [
+                        "demand"
+                      ]
+                    },
+                    "pricePerGpu": {
+                      "type": "number"
+                    },
+                    "pricePerDiskSize": {
+                      "type": "number"
+                    },
+                    "priceAutoRenewMax": {
+                      "type": "number"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "example": "2025-05-10T13:59:01+02:00"
+                    },
+                    "autoRenewAt": {
+                      "type": "string",
+                      "example": "2025-05-10T13:59:01+02:00"
+                    },
+                    "isAutoRenewOn": {
+                      "type": "boolean"
+                    },
+                    "instanceTemplate": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer"
+                        },
+                        "imageName": {
+                          "type": "string"
+                        },
+                        "defaultTag": {
+                          "type": "string"
+                        },
+                        "isRunSshServerOn": {
+                          "type": "boolean"
+                        },
+                        "isRunJupyterOn": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    "ports": {
+                      "type": "object",
+                      "description": "Port mapping for the instance. Direct ports use the host IP; proxy ports use Cloudflare tunnel URLs.",
+                      "properties": {
+                        "direct": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "srcPort": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ],
+                                "description": "Source port inside the container"
+                              },
+                              "destPort": {
+                                "type": "string",
+                                "description": "Destination port on the host"
+                              },
+                              "ip": {
+                                "type": "string",
+                                "description": "Host IP address for direct connection"
+                              },
+                              "protocol": {
+                                "type": "string",
+                                "description": "Connection protocol (e.g. http, https, unknown)"
+                              },
+                              "service": {
+                                "type": "string",
+                                "description": "Service name (e.g. console, ssh, jupyter)"
+                              }
+                            }
+                          }
+                        },
+                        "proxy": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "srcPort": {
+                                "oneOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "integer"
+                                  }
+                                ],
+                                "description": "Source port inside the container"
+                              },
+                              "protocol": {
+                                "type": "string",
+                                "description": "Connection protocol (e.g. https, closed)"
+                              },
+                              "url": {
+                                "type": "string",
+                                "description": "Cloudflare tunnel URL, or \"closed\" if unavailable"
+                              },
+                              "service": {
+                                "type": "string",
+                                "description": "Service name (e.g. console, ssh, jupyter)"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "cpuUsage": {
+                      "type": "integer"
+                    },
+                    "memUsage": {
+                      "type": "integer"
+                    },
+                    "diskUsage": {
+                      "type": "integer"
+                    },
+                    "processUptime": {
+                      "type": "integer"
+                    },
+                    "console": {
+                      "type": "string"
+                    },
+                    "consoleSystem": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "$ref": "#/components/responses/responses-403"
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/1' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/1',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Update Instance",
+        "description": "Updates a Docker rental instance's settings. Can modify auto-renew, max price, name, notes, start script, env variables, and Docker image template. For VPS instances, disk size can only be increased.",
+        "operationId": "putInstanceItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isAutoRenewOn": {
+                    "description": "Set Allow Auto Renew",
+                    "type": "boolean",
+                    "example": true
+                  },
+                  "priceAutoRenewMax": {
+                    "description": "Set max price for auto renew",
+                    "type": "number",
+                    "example": 1
+                  },
+                  "notes": {
+                    "description": "Set notes",
+                    "type": "string",
+                    "example": "notes here"
+                  },
+                  "instanceTemplate": {
+                    "description": "IRI of template",
+                    "type": "string",
+                    "example": "/instances/templates/29"
+                  },
+                  "name": {
+                    "description": "Set name of instance",
+                    "type": "string",
+                    "example": "sensible_pangolin"
+                  },
+                  "startScript": {
+                    "description": "Autostart bash script",
+                    "type": "string"
+                  },
+                  "envVariables": {
+                    "description": "ENV variables",
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "example": "ENV1"
+                        },
+                        "value": {
+                          "type": "string",
+                          "example": "VALUE1"
+                        }
+                      }
+                    },
+                    "example": [
+                      {
+                        "name": "ENV1",
+                        "value": "VALUE1"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request PUT 'https://api.simplepod.ai/instances/1' \\\n--header 'Content-Type: application/json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n  \"isAutoRenewOn\": true,\n  \"priceAutoRenewMax\": 1,\n  \"notes\": \"\",\n  \"instanceTemplate\": \"/instances/templates/29\",\n  \"name\": \"sensible_pangolin\"\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n$data = [\n    'isAutoRenewOn' => true,\n    'priceAutoRenewMax' => 1,\n    'notes' => '',\n    'instanceTemplate' => '/instances/templates/29',\n    'name' => 'sensible_pangolin',\n    'envVariables' => [['name' => 'ENV1', 'value' => 'VALUE1']],\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances/1',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'PUT',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Rent Docker",
+          "Rent VPS"
+        ],
+        "summary": "Delete Instance",
+        "description": "Deletes a rental instance (Docker or VPS).",
+        "operationId": "deleteInstanceItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Instance ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "$ref": "#/components/responses/responses-403"
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request DELETE 'https://api.simplepod.ai/instances/1' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/1',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'DELETE',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/reboot": {
+      "patch": {
+        "tags": [
+          "Rent Docker"
+        ],
+        "summary": "Reboot Instance",
+        "description": "Triggers a reboot for one or more Docker instances. Accepts an array of instance IDs as a bulk operation.",
+        "operationId": "patchInstanceRebootCollection",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/merge-patch+json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instanceIds": {
+                    "description": "Provide Instance IDs",
+                    "type": "array",
+                    "items": {},
+                    "example": [
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "detail": {
+                          "example": "instanceIds not provided."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request PATCH 'https://api.simplepod.ai/instances/reboot' \\\n--header 'Content-Type: application/merge-patch+json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n    \"instanceIds\": [1,2,3]\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n$data = [\n    'instanceIds' => [1, 2, 3],\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances/reboot',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'PATCH',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => ['Content-Type: application/merge-patch+json', 'X-AUTH-TOKEN: apiKey'],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/reboot?mode=vm": {
+      "patch": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "Reboot Instance",
+        "description": "Triggers a reboot for one or more VPS instances. Accepts a mixed array of instance IDs and support IDs (e.g., 'V_abcd') as a bulk operation.",
+        "operationId": "patchInstanceRebootVpsCollection",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/merge-patch+json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instanceIds": {
+                    "description": "Provide Instance IDs or support IDs",
+                    "type": "array",
+                    "items": {},
+                    "example": [
+                      "V_abcd",
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "detail": {
+                          "example": "instanceIds not provided."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request PATCH 'https://api.simplepod.ai/instances/reboot' \\\n--header 'Content-Type: application/merge-patch+json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n    \"instanceIds\": [\"V_abcd\", 1,2,3]\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n$data = [\n    'instanceIds' => ['V_abcd', 1, 2, 3],\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances/reboot',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'PATCH',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => ['Content-Type: application/merge-patch+json', 'X-AUTH-TOKEN: apiKey'],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/pause": {
+      "patch": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "Pause Instance",
+        "description": "Pauses one or more VPS instances. Accepts a mixed array of instance IDs and support IDs (e.g., 'V_abcd'). Paused instances retain their configuration and can be resumed later using the Resume VPS endpoint.",
+        "operationId": "patchInstancePauseCollection",
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "example": "application/merge-patch+json",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "instanceIds": {
+                    "description": "Provide Instance IDs or support IDs",
+                    "type": "array",
+                    "items": {},
+                    "example": [
+                      "V_abcd",
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "example": {}
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    },
+                    {
+                      "properties": {
+                        "detail": {
+                          "example": "instanceIds not provided."
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/responses-404"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request PATCH 'https://api.simplepod.ai/instances/pause' \\\n--header 'Content-Type: application/merge-patch+json' \\\n--header 'X-AUTH-TOKEN: apiKey' \\\n--data-raw '{\n    \"instanceIds\": [\"V_abcd\", 1,2,3]\n}'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n$data = [\n    'instanceIds' => ['V_abcd', 1, 2, 3], // you can use supportIds or internal IDs\n];\n\ntry {\n    curl_setopt_array($curl, [\n        CURLOPT_URL => 'https://api.simplepod.ai/instances/pause',\n        CURLOPT_RETURNTRANSFER => true,\n        CURLOPT_ENCODING => '',\n        CURLOPT_MAXREDIRS => 10,\n        CURLOPT_TIMEOUT => 0,\n        CURLOPT_FOLLOWLOCATION => true,\n        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n        CURLOPT_CUSTOMREQUEST => 'PATCH',\n        CURLOPT_POSTFIELDS => json_encode($data, JSON_THROW_ON_ERROR),\n        CURLOPT_HTTPHEADER => ['Content-Type: application/merge-patch+json', 'X-AUTH-TOKEN: apiKey'],\n    ]);\n} catch (JsonException $e) {\n}\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/billing/list": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "List of usage",
+        "description": "Returns billing and usage data for the authenticated user's instances.",
+        "operationId": "getInstanceBillingCollection",
+        "parameters": [
+          {
+            "name": "instanceId",
+            "in": "query",
+            "description": "Instance ID",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "hashId": {
+                        "type": "string",
+                        "description": "Unique instance hash. For Docker instances this value is also the password used for SSH and console access."
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "gpuModel": {
+                        "type": "string"
+                      },
+                      "gpuMemorySize": {
+                        "type": "integer"
+                      },
+                      "gpuCount": {
+                        "type": "integer"
+                      },
+                      "cpuCoreCount": {
+                        "type": "number"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "active",
+                          "deleted",
+                          "created",
+                          "exited",
+                          "paused",
+                          "restarting",
+                          "running",
+                          "removing"
+                        ]
+                      },
+                      "duration": {
+                        "type": "integer"
+                      },
+                      "rentalType": {
+                        "type": "string",
+                        "enum": [
+                          "demand"
+                        ]
+                      },
+                      "pricePerGpu": {
+                        "type": "number"
+                      },
+                      "pricePerDiskSize": {
+                        "type": "number"
+                      },
+                      "priceAutoRenewMax": {
+                        "type": "number"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "autoRenewAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "isAutoRenewOn": {
+                        "type": "boolean"
+                      },
+                      "instanceTemplate": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer"
+                          },
+                          "imageName": {
+                            "type": "string"
+                          },
+                          "defaultTag": {
+                            "type": "string"
+                          },
+                          "isRunSshServerOn": {
+                            "type": "boolean"
+                          },
+                          "isRunJupyterOn": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "ports": {
+                        "type": "object",
+                        "properties": {
+                          "direct": {
+                            "type": "array",
+                            "items": {}
+                          },
+                          "proxy": {
+                            "type": "array",
+                            "items": {}
+                          }
+                        }
+                      },
+                      "cpuUsage": {
+                        "type": "integer"
+                      },
+                      "memUsage": {
+                        "type": "integer"
+                      },
+                      "diskUsage": {
+                        "type": "integer"
+                      },
+                      "processUptime": {
+                        "type": "integer"
+                      },
+                      "console": {
+                        "type": "string"
+                      },
+                      "consoleSystem": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/billing/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/billing/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/summary": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Instances Summary",
+        "description": "Returns a summary of the authenticated user's active instances and rental availability, including current balance and estimated rental hours.",
+        "operationId": "getInstanceSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "all": {
+                      "type": "object",
+                      "properties": {
+                        "active": {
+                          "type": "object",
+                          "properties": {
+                            "rri": {
+                              "type": "array",
+                              "items": {}
+                            },
+                            "rriCountTotal": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "rentalAvailability": {
+                      "type": "object",
+                      "properties": {
+                        "pricePerInstances": {
+                          "type": "number"
+                        },
+                        "balanceRental": {
+                          "type": "number"
+                        },
+                        "availableRentalHours": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                },
+                "example": {
+                  "all": {
+                    "active": {
+                      "rri": [],
+                      "rriCountTotal": 0
+                    }
+                  },
+                  "rentalAvailability": {
+                    "pricePerInstances": 0,
+                    "balanceRental": 7.16482578,
+                    "availableRentalHours": 0
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/summary' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/summary',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/instances/deposit/list": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Deposits",
+        "description": "Returns the authenticated user's deposit history with pricing details and status.",
+        "operationId": "getDepositUserListCollection",
+        "parameters": [
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "cpuCoreCount": {
+                        "type": "integer"
+                      },
+                      "cpuModel": {
+                        "type": "string"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "diskSpeedRead": {
+                        "type": "integer"
+                      },
+                      "diskSpeedWrite": {
+                        "type": "integer"
+                      },
+                      "diskType": {
+                        "type": "string"
+                      },
+                      "downloadSpeedtest": {
+                        "type": "integer"
+                      },
+                      "errors": {
+                        "type": "array",
+                        "items": {}
+                      },
+                      "gpuCount": {
+                        "type": "integer"
+                      },
+                      "gpuCudaVer": {
+                        "type": "string"
+                      },
+                      "gpuDriverVer": {
+                        "type": "string"
+                      },
+                      "gpuMemorySize": {
+                        "type": "integer"
+                      },
+                      "gpuModel": {
+                        "type": "string"
+                      },
+                      "gpuPcieBandwidth": {
+                        "type": "integer"
+                      },
+                      "gpuPcieGen": {
+                        "type": "integer"
+                      },
+                      "gpuPcieWidth": {
+                        "type": "integer"
+                      },
+                      "gpuTFlops": {
+                        "type": "integer"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "example": "2025-05-10T13:59:01+02:00"
+                      },
+                      "isAvailableForDemand": {
+                        "type": "boolean"
+                      },
+                      "isAvailableForInterruptible": {
+                        "type": "boolean"
+                      },
+                      "pricePerDiskSize": {
+                        "type": "number"
+                      },
+                      "pricePerDlp": {
+                        "type": "number"
+                      },
+                      "pricePerGpu": {
+                        "type": "number"
+                      },
+                      "pricePerTFlops": {
+                        "type": "number"
+                      },
+                      "rentalTimeMax": {
+                        "type": "integer"
+                      },
+                      "sla": {
+                        "type": "number"
+                      },
+                      "sysDlp": {
+                        "type": "integer"
+                      },
+                      "systemMemory": {
+                        "type": "integer"
+                      },
+                      "uploadSpeedtest": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/deposit/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/deposit/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    },
+    "/user-ssh-keys/list": {
+      "get": {
+        "tags": [
+          "Rent VPS"
+        ],
+        "summary": "My SSH Keys",
+        "description": "Returns the authenticated user's saved SSH public keys. These keys can be referenced by IRI when renting VPS instances instead of providing a raw public key each time. Supports pagination and search filtering by key name.",
+        "operationId": "getUserSshKeysCollection",
+        "parameters": [
+          {
+            "name": "itemsPerPage",
+            "in": "query",
+            "description": "Number of items returned",
+            "example": 100,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Number of page",
+            "example": 1,
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Filter by search phrase",
+            "example": "ubuntu",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "integer"
+                      },
+                      "imageName": {
+                        "type": "string"
+                      },
+                      "categoryName": {
+                        "type": "string"
+                      },
+                      "defaultTag": {
+                        "type": "string"
+                      },
+                      "diskSize": {
+                        "type": "integer"
+                      },
+                      "exposePorts": {
+                        "type": "string"
+                      },
+                      "notes": {
+                        "type": "string"
+                      },
+                      "isPasswordProtected": {
+                        "type": "boolean"
+                      },
+                      "isRunSshServerOn": {
+                        "type": "boolean"
+                      },
+                      "isRunJupyterOn": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/responses-401"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/Error"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "cURL",
+            "label": "CLI",
+            "source": "curl --location --request GET 'https://api.simplepod.ai/instances/templates/list' \\\n--header 'X-AUTH-TOKEN: apiKey'\n"
+          },
+          {
+            "lang": "PHP",
+            "source": "<?php\n\n$curl = curl_init();\n\ncurl_setopt_array($curl, [\n    CURLOPT_URL => 'https://api.simplepod.ai/instances/templates/list',\n    CURLOPT_RETURNTRANSFER => true,\n    CURLOPT_ENCODING => '',\n    CURLOPT_MAXREDIRS => 10,\n    CURLOPT_TIMEOUT => 0,\n    CURLOPT_FOLLOWLOCATION => true,\n    CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,\n    CURLOPT_CUSTOMREQUEST => 'GET',\n    CURLOPT_HTTPHEADER => ['X-AUTH-TOKEN: apiKey'],\n]);\n\n$response = curl_exec($curl);\n\ncurl_close($curl);\necho $response;\n"
+          }
+        ]
+      }
+    }
+  },
+  "x-tagGroups": [
+    {
+      "name": "Rent GPU Instance",
+      "tags": [
+        "Rent Docker",
+        "Rent VPS",
+        "Billing"
+      ]
+    }
+  ]
+}
