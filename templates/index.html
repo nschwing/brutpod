@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>brutpod</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <style>
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #21262d;
+      --accent:   #58a6ff;
+      --success:  #3fb950;
+      --error:    #f85149;
+      --warn:     #e3b341;
+      --text:     #c9d1d9;
+      --muted:    #484f58;
+      --muted2:   #8b949e;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 15px; color: var(--accent); letter-spacing: 0.04em; }
+    header span { color: var(--muted2); font-size: 12px; }
+
+    main {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .pane {
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .pane + .pane { border-left: 1px solid var(--border); }
+
+    /* ---- Section headings ---- */
+    .section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted2);
+      margin-bottom: 14px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ---- Form ---- */
+    .field { margin-bottom: 12px; }
+    label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted2);
+      margin-bottom: 3px;
+    }
+    input[type="text"],
+    input[type="password"],
+    input[type="number"],
+    input[type="time"],
+    select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.12s;
+      -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--accent); }
+    select { cursor: pointer; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    .hint { font-size: 11px; color: var(--muted2); margin-top: 3px; }
+
+    .sep { border-top: 1px solid var(--border); margin: 18px 0; }
+
+    .form-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 14px;
+    }
+
+    /* ---- Buttons ---- */
+    button {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      white-space: nowrap;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button[hx-post="/start"]:hover { border-color: var(--success); color: var(--success); }
+    .btn-danger { border-color: var(--muted); }
+    .btn-danger:hover { border-color: var(--error) !important; color: var(--error) !important; }
+
+    .saved { color: var(--success); font-size: 12px; }
+
+    /* ---- Status panel ---- */
+    #status-panel { height: 100%; display: flex; flex-direction: column; gap: 14px; }
+
+    .status-controls { display: flex; align-items: center; gap: 10px; }
+
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid transparent;
+    }
+    .badge-running {
+      color: var(--success);
+      border-color: #238636;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .badge-success { color: var(--success); border-color: #238636; }
+    .badge-muted   { color: var(--muted2); border-color: var(--border); }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .stat {
+      background: var(--surface);
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat-label { font-size: 10px; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.08em; }
+    .stat-value { font-size: 13px; color: var(--text); }
+
+    .alert {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      border: 1px solid;
+    }
+    .alert-error { color: var(--error); background: rgba(248,81,73,0.08); border-color: rgba(248,81,73,0.3); }
+    .btn-icon {
+      background: none; border: 1px solid var(--border); color: var(--muted2);
+      padding: 2px 7px; font-size: 11px; border-radius: 4px;
+    }
+    .btn-icon:hover { border-color: var(--accent); color: var(--accent); }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline; }
+
+    #gpu-type-list { margin-top: 6px; }
+    .gpu-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+    .gpu-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted2); padding: 3px 8px; border-radius: 4px;
+      font-size: 10px; cursor: pointer; white-space: nowrap;
+    }
+    .gpu-chip:hover { border-color: var(--accent); color: var(--text); }
+    .gpu-chip.active { border-color: var(--success); color: var(--success); }
+    .gpu-chip-meta { opacity: 0.6; }
+    .api-hint { font-size: 11px; color: var(--muted2); display: block; margin-top: 4px; }
+    .api-hint.error { color: var(--error); }
+
+    .from-env {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--success);
+      background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.25);
+      padding: 5px 10px; border-radius: 5px; width: 100%;
+    }
+
+    /* ---- Log ---- */
+    .log {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow-y: auto;
+      padding: 10px 12px;
+      min-height: 0;
+    }
+    .log-line { font-size: 11px; line-height: 1.7; border-bottom: 1px solid rgba(33,38,45,0.8); }
+    .log-line:last-child { border-bottom: none; }
+    .log-ok   { color: var(--success); }
+    .log-err  { color: var(--error); }
+    .log-muted { color: var(--muted2); }
+    .log-empty { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>brutpod</h1>
+    <span>RunPod GPU Deployer</span>
+  </header>
+
+  <main>
+    <!-- ---- Config pane ---- -->
+    <div class="pane">
+      <p class="section-title">Konfiguration</p>
+      <form hx-post="/config" hx-target="#save-feedback" hx-swap="innerHTML">
+
+        <div class="field">
+          <label>API Key</label>
+          {% if env.api_key %}
+          <span class="from-env">✓ aus $RUNPOD_API_KEY</span>
+          <input type="hidden" name="api_key" value="{{ state.config.api_key }}">
+          {% else %}
+          <input type="password" name="api_key" value="{{ state.config.api_key }}" autocomplete="off" placeholder="RunPod API Key">
+          {% endif %}
+        </div>
+
+        <div class="field">
+          <label>GPU Types — kommagetrennt, Prioritätsreihenfolge</label>
+          <input type="text" id="gpu-types-input" name="gpu_types" value="{{ state.config.gpu_types }}"
+                 placeholder="NVIDIA GeForce RTX 4090, NVIDIA RTX A6000">
+          <div id="gpu-type-list"
+            hx-get="/api/gpu-types"
+            hx-trigger="load"
+            hx-swap="innerHTML">
+            <span class="api-hint">Lade GPU Types…</span>
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Cloud</label>
+            <select name="cloud">
+              <option value="SECURE"    {% if state.config.cloud == "SECURE"    %}selected{% endif %}>SECURE</option>
+              <option value="COMMUNITY" {% if state.config.cloud == "COMMUNITY" %}selected{% endif %}>COMMUNITY</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>GPU Anzahl</label>
+            <input type="number" name="gpu_count" value="{{ state.config.gpu_count }}" min="1" max="8">
+          </div>
+        </div>
+
+        <div class="field">
+          <label style="display:flex;align-items:center;justify-content:space-between">
+            <span>Template <span style="color:var(--muted2)">(optional)</span></span>
+            <button type="button" class="btn-icon"
+              hx-get="/api/templates"
+              hx-target="#template-select"
+              hx-swap="innerHTML"
+              hx-indicator="#template-spinner"
+              title="Templates neu laden">↻ <span id="template-spinner" class="htmx-indicator">…</span></button>
+          </label>
+          <select name="template" id="template-select"
+            hx-get="/api/templates"
+            hx-trigger="load"
+            hx-swap="innerHTML">
+            <option value="{{ state.config.template }}">Lade Templates…</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>CUDA Versionen — kommagetrennt, leer = alle</label>
+          <input type="text" name="cuda" value="{{ state.config.cuda }}" placeholder="12.8, 12.9">
+        </div>
+
+        <div class="row3">
+          <div class="field">
+            <label>Container Disk (GB)</label>
+            <input type="number" name="container_disk" value="{{ state.config.container_disk }}" min="1">
+          </div>
+          <div class="field">
+            <label>Volume (GB)</label>
+            <input type="number" name="volume" value="{{ state.config.volume }}" min="0">
+          </div>
+          <div class="field">
+            <label>Pod-Name Basis</label>
+            <input type="text" name="pod_name_base" value="{{ state.config.pod_name_base }}">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Retry Intervall (s)</label>
+            <input type="number" name="retry_seconds" value="{{ state.config.retry_seconds }}" min="10">
+          </div>
+          <div class="field">
+            <label>Proxy URL <span style="color:var(--muted2)">(optional)</span></label>
+            <input type="text" name="proxy" value="{{ state.config.proxy }}" placeholder="http://localhost:8118">
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label>Zeitfenster Von</label>
+            <input type="time" name="time_from" value="{{ state.config.time_from }}">
+          </div>
+          <div class="field">
+            <label>Zeitfenster Bis</label>
+            <input type="time" name="time_to" value="{{ state.config.time_to }}">
+          </div>
+        </div>
+
+        <div class="sep"></div>
+        <p class="section-title">Pushover</p>
+
+        <div class="row2">
+          <div class="field">
+            <label>App Token</label>
+            {% if env.pushover_token %}
+            <span class="from-env">✓ aus $PUSHOVER_TOKEN</span>
+            <input type="hidden" name="pushover_token" value="{{ state.config.pushover_token }}">
+            {% else %}
+            <input type="password" name="pushover_token" value="{{ state.config.pushover_token }}" autocomplete="off">
+            {% endif %}
+          </div>
+          <div class="field">
+            <label>User Key</label>
+            {% if env.pushover_user %}
+            <span class="from-env">✓ aus $PUSHOVER_USER</span>
+            <input type="hidden" name="pushover_user" value="{{ state.config.pushover_user }}">
+            {% else %}
+            <input type="password" name="pushover_user" value="{{ state.config.pushover_user }}" autocomplete="off">
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <button type="submit">Speichern</button>
+          <span id="save-feedback"></span>
+        </div>
+      </form>
+    </div>
+
+    <!-- ---- Status pane ---- -->
+    <div class="pane">
+      {% include "_status.html" %}
+    </div>
+  </main>
+  <script>
+    function addGpuType(id) {
+      const input = document.getElementById('gpu-types-input');
+      const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
+      if (!current.includes(id)) {
+        current.push(id);
+        input.value = current.join(', ');
+      }
+      // Highlight active chips
+      document.querySelectorAll('.gpu-chip').forEach(btn => {
+        const vals = input.value.split(',').map(s => s.trim());
+        btn.classList.toggle('active', vals.includes(btn.title));
+      });
+    }
+
+    // Sync chip highlight state after HTMX loads the chip list
+    document.addEventListener('htmx:afterSwap', function(e) {
+      if (e.detail.target.id === 'gpu-type-list') {
+        const input = document.getElementById('gpu-types-input');
+        if (!input) return;
+        const vals = input.value.split(',').map(s => s.trim());
+        document.querySelectorAll('.gpu-chip').forEach(btn => {
+          btn.classList.toggle('active', vals.includes(btn.title));
+        });
+      }
+    });
+  </script>
+</body>
+</html>

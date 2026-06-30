@@ -1,0 +1,55 @@
+<div id="status-panel"
+  {% if state.status.running %}
+  hx-get="/status" hx-trigger="every 3s" hx-swap="outerHTML"
+  {% endif %}
+>
+  <h2>Status</h2>
+
+  <div class="status-controls">
+    {% if state.status.running %}
+      <button class="btn-danger" hx-post="/stop" hx-target="#status-panel" hx-swap="outerHTML">■ Stop</button>
+      <span class="badge badge-running">● Läuft</span>
+    {% elif state.status.success %}
+      <button hx-post="/start" hx-target="#status-panel" hx-swap="outerHTML">▶ Neu starten</button>
+      <span class="badge badge-success">✓ Pod erstellt</span>
+    {% else %}
+      <button hx-post="/start" hx-target="#status-panel" hx-swap="outerHTML">▶ Start</button>
+      {% if state.status.attempts > 0 %}
+        <span class="badge badge-muted">Gestoppt nach {{ state.status.attempts }} Versuch{{ 'en' if state.status.attempts != 1 else '' }}</span>
+      {% endif %}
+    {% endif %}
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-label">Versuche</span>
+      <span class="stat-value">{{ state.status.attempts }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Letzter Check</span>
+      <span class="stat-value">{{ state.status.last_check or '—' }}</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Intervall</span>
+      <span class="stat-value">{{ state.config.retry_seconds }}s</span>
+    </div>
+    <div class="stat">
+      <span class="stat-label">Zeitfenster</span>
+      <span class="stat-value">{{ state.config.time_from }}–{{ state.config.time_to }}</span>
+    </div>
+  </div>
+
+  {% if state.status.last_error %}
+  <div class="alert alert-error">{{ state.status.last_error }}</div>
+  {% endif %}
+
+  <div class="log">
+    {% if state.status.log %}
+      {% for entry in state.status.log %}
+      <div class="log-line{% if '✓' in entry %} log-ok{% elif '✗' in entry %} log-err{% elif 'Außerhalb' in entry %} log-muted{% endif %}">{{ entry }}</div>
+      {% endfor %}
+    {% else %}
+      <div class="log-empty">Noch keine Einträge.</div>
+    {% endif %}
+  </div>
+</div>
