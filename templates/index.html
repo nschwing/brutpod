@@ -251,6 +251,7 @@
           <div id="gpu-type-list"
             hx-get="/api/gpu-types"
             hx-trigger="load"
+            hx-target="this"
             hx-swap="innerHTML">
             <span class="api-hint">Lade GPU Types…</span>
           </div>
@@ -283,6 +284,7 @@
           <select name="template" id="template-select"
             hx-get="/api/templates"
             hx-trigger="load"
+            hx-target="this"
             hx-swap="innerHTML">
             <option value="{{ state.config.template }}">Lade Templates…</option>
           </select>
