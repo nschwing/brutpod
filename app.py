@@ -449,7 +449,7 @@ async def start(request: Request):
     global _poll_thread
     with _lock:
         state = load_state()
-        if not state["config"]["api_key"]:
+        if not active_secrets(state["config"])["api_key"]:
             return HTMLResponse('<p style="color:var(--error)">API-Key fehlt.</p>')
         state["status"].update({
             "running": True,
