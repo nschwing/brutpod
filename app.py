@@ -2,6 +2,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, time as dtime
 from pathlib import Path
+from urllib.parse import quote
 import json
 import random
 import string
@@ -18,13 +19,19 @@ BASE_DIR = Path(__file__).parent
 STATE_FILE = Path("state.json")
 MAX_LOG = 200
 
-GRAPHQL_URL = "https://api.runpod.io/graphql"
-REST_URL = "https://rest.runpod.io/v1"
+API_URL = "https://api.runpod.io/v2"
+
+# v2 requires an explicit mount path; this was the v1 default.
+VOLUME_MOUNT_PATH = "/workspace"
+# Upstream rejects a persistent mount smaller than this.
+MIN_VOLUME_GB = 10
 
 DEFAULT_CONFIG: dict = {
     "api_key": "",
-    "gpu_types": "NVIDIA GeForce RTX 4090",
+    "gpu_type": "NVIDIA GeForce RTX 4090",
+    "min_ram_per_gpu": 0,
     "template": "",
+    "env": "",
     "cloud": "SECURE",
     "gpu_count": 1,
     "cuda": "",
@@ -61,13 +68,22 @@ def load_state() -> dict:
     if STATE_FILE.exists():
         try:
             data = json.loads(STATE_FILE.read_text())
+            stored = _migrate_config(data.get("config", {}))
             return {
-                "config": {**DEFAULT_CONFIG, **data.get("config", {})},
+                "config": {**DEFAULT_CONFIG, **stored},
                 "status": {**DEFAULT_STATUS, **data.get("status", {})},
             }
         except Exception:
             pass
     return {"config": {**DEFAULT_CONFIG}, "status": {**DEFAULT_STATUS}}
+
+
+def _migrate_config(stored: dict) -> dict:
+    """Carry pre-v2 state forward: gpu_types was a priority list, gpu_type is one ID."""
+    legacy = stored.pop("gpu_types", "")
+    if legacy and not stored.get("gpu_type"):
+        stored["gpu_type"] = legacy.split(",")[0].strip()
+    return stored
 
 
 def save_state(state: dict) -> None:
@@ -135,6 +151,115 @@ def _random_suffix(n: int = 6) -> str:
     return "".join(random.choices(string.ascii_lowercase + string.digits, k=n))
 
 
+# ---------------------------------------------------------------------------
+# RunPod API v2
+# ---------------------------------------------------------------------------
+
+class ApiError(RuntimeError):
+    """An error response from the v2 API.
+
+    `fatal` marks the ones no amount of retrying fixes: a broken request, a
+    rejected key, an empty balance. Polling stops on those instead of hammering
+    the API once a minute forever. 400 is deliberately not fatal — on pod
+    create it means either a cross-field rule violation or exhausted capacity,
+    and the API gives no way to tell the two apart.
+    """
+
+    FATAL_STATUS = {401, 402, 403, 404, 422}
+
+    def __init__(self, status: int, detail: str):
+        super().__init__(f"HTTP {status}: {detail}")
+        self.status = status
+        self.detail = detail
+        self.fatal = status in self.FATAL_STATUS
+
+
+def api_request(method: str, path: str, api_key: str, proxies: dict, **kwargs):
+    resp = requests.request(
+        method,
+        f"{API_URL}{path}",
+        headers={"Authorization": f"Bearer {api_key}"},
+        proxies=proxies,
+        timeout=30,
+        **kwargs,
+    )
+    if not resp.ok:
+        try:
+            err = resp.json()
+            detail = err.get("detail") or err.get("title") or resp.text[:300]
+            if err.get("errors"):
+                detail = f"{detail} ({'; '.join(err['errors'])[:200]})"
+        except ValueError:
+            detail = resp.text[:300]
+        raise ApiError(resp.status_code, detail)
+    return resp.json()
+
+
+def fetch_gpu_availability(gpu_type: str, cfg: dict, api_key: str, proxies: dict) -> dict:
+    """Read one GPU type from the catalog, with current pod stock."""
+    params = {
+        "include": "AVAILABILITY",
+        "product": "POD",
+        "count": cfg["gpu_count"],
+        "cloud": cfg["cloud"],
+    }
+    cuda = [c.strip() for c in cfg["cuda"].split(",") if c.strip()]
+    if cuda:
+        params["cudaVersions"] = ",".join(cuda)
+    return api_request(
+        "GET",
+        f"/catalog/gpus/{quote(gpu_type, safe='')}",
+        api_key,
+        proxies,
+        params=params,
+    )
+
+
+def parse_env(text: str) -> dict:
+    """Parse KEY=VALUE lines into a dict, skipping blanks and # comments.
+
+    Values are passed through verbatim so RunPod's secret placeholders
+    ({{ RUNPOD_SECRET_name }}) survive intact — they are resolved when the pod
+    is provisioned, not here.
+    """
+    env: dict = {}
+    for lineno, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, sep, value = line.partition("=")
+        key = key.strip()
+        if not sep or not key:
+            raise ValueError(f"Zeile {lineno}: erwartet KEY=VALUE, gefunden {line!r}")
+        env[key] = value.strip()
+    return env
+
+
+def build_pod_payload(cfg: dict, pod_name: str) -> dict:
+    gpu: dict = {"id": cfg["gpu_type"].strip(), "count": cfg["gpu_count"]}
+    if cfg["min_ram_per_gpu"]:
+        gpu["minRamPerGpu"] = cfg["min_ram_per_gpu"]
+    cuda = [c.strip() for c in cfg["cuda"].split(",") if c.strip()]
+    if cuda:
+        gpu["allowedCudaVersions"] = cuda
+
+    payload: dict = {
+        "name": pod_name,
+        "cloud": cfg["cloud"],
+        "gpu": gpu,
+        "disk": cfg["container_disk"],
+    }
+    if cfg["template"]:
+        payload["templateId"] = cfg["template"]
+    # Merged per key with the template's env, body values winning.
+    env = parse_env(cfg["env"])
+    if env:
+        payload["env"] = env
+    if cfg["volume"] >= MIN_VOLUME_GB:
+        payload["mounts"] = {"persistent": {"size": cfg["volume"], "path": VOLUME_MOUNT_PATH}}
+    return payload
+
+
 def poll_once() -> None:
     with _lock:
         state = load_state()
@@ -155,117 +280,74 @@ def poll_once() -> None:
 
     cfg = state["config"]
     secrets = active_secrets(cfg)
-    gpu_types = [g.strip() for g in cfg["gpu_types"].split(",") if g.strip()]
-    cuda_versions = [c.strip() for c in cfg["cuda"].split(",") if c.strip()] if cfg["cuda"] else []
+    gpu_type = cfg["gpu_type"].strip()
     proxies = {"http": cfg["proxy"], "https": cfg["proxy"]} if cfg["proxy"] else {}
-    secure = cfg["cloud"] == "SECURE"
+
+    if not gpu_type:
+        _fail("Kein GPU-Typ konfiguriert", fatal=True)
+        return
 
     try:
-        query = """
-        query GpuTypes($input: GpuLowestPriceInput) {
-          gpuTypes {
-            id displayName memoryInGb secureCloud communityCloud
-            lowestPrice(input: $input) {
-              minimumBidPrice uninterruptablePrice stockStatus
-            }
-          }
-        }
-        """
-        resp = requests.post(
-            GRAPHQL_URL,
-            json={"query": query, "variables": {"input": {"gpuCount": cfg["gpu_count"], "secureCloud": secure}}},
-            headers={"Authorization": f"Bearer {secrets['api_key']}"},
-            proxies=proxies,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if "errors" in data:
-            raise RuntimeError(f"GraphQL: {data['errors']}")
+        gpu = fetch_gpu_availability(gpu_type, cfg, secrets["api_key"], proxies)
+        level = gpu.get("availability") or "NONE"
+        label = gpu.get("name") or gpu_type
 
-        available: list[str] = []
-        for gpu in data["data"]["gpuTypes"]:
-            if gpu["id"] not in gpu_types:
-                continue
-            in_cloud = gpu["secureCloud"] if secure else gpu["communityCloud"]
-            if not in_cloud:
-                continue
-            stock = (gpu.get("lowestPrice") or {}).get("stockStatus")
-            if stock:
-                available.append(gpu["id"])
-                with _lock:
-                    s = load_state()
-                    add_log(s, f"  ✓ {gpu['displayName']} — {stock}")
-                    save_state(s)
-            else:
-                with _lock:
-                    s = load_state()
-                    add_log(s, f"  ✗ {gpu['displayName']} — nicht verfügbar")
-                    save_state(s)
-
-        if not available:
+        if level == "NONE":
             with _lock:
                 s = load_state()
                 s["status"]["last_error"] = None
-                add_log(s, "Keine passenden GPUs verfügbar")
+                add_log(s, f"  ✗ {label} — nicht verfügbar")
                 save_state(s)
             return
 
-        # Create pod
-        ordered_ids = [g for g in gpu_types if g in available]
-        pod_name = f"{cfg['pod_name_base']}-{_random_suffix()}"
-        payload: dict = {
-            "name": pod_name,
-            "cloudType": cfg["cloud"],
-            "gpuTypeIds": ordered_ids,
-            "gpuCount": cfg["gpu_count"],
-            "containerDiskInGb": cfg["container_disk"],
-            "volumeInGb": cfg["volume"],
-            "gpuTypePriority": "custom",
-        }
-        if cfg["template"]:
-            payload["templateId"] = cfg["template"]
-        if cuda_versions:
-            payload["allowedCudaVersions"] = cuda_versions
+        locations = ", ".join(dc["id"] for dc in gpu.get("dataCenters") or [])
+        with _lock:
+            s = load_state()
+            add_log(s, f"  ✓ {label} — {level}" + (f" ({locations})" if locations else ""))
+            save_state(s)
 
-        resp2 = requests.post(
-            f"{REST_URL}/pods",
-            json=payload,
-            headers={"Authorization": f"Bearer {secrets['api_key']}"},
-            proxies=proxies,
-            timeout=30,
+        pod_name = f"{cfg['pod_name_base']}-{_random_suffix()}"
+        pod = api_request(
+            "POST",
+            "/pods",
+            secrets["api_key"],
+            proxies,
+            json=build_pod_payload(cfg, pod_name),
         )
-        resp2.raise_for_status()
-        pod = resp2.json()
 
         with _lock:
             s = load_state()
             s["status"]["running"] = False
             s["status"]["success"] = True
             s["status"]["last_error"] = None
-            add_log(s, f"✓ Pod erstellt! ID={pod.get('id')} Name={pod.get('name')} Status={pod.get('desiredStatus')}")
+            add_log(s, f"✓ Pod erstellt! ID={pod.get('id')} Name={pod.get('name')} Status={pod.get('status')}")
             save_state(s)
 
         _stop_event.set()
         send_pushover(
             secrets["pushover_token"],
             secrets["pushover_user"],
-            f"brutpod: GPU gebucht!\nPod {pod.get('name')} ({pod.get('id')})\nGPUs: {', '.join(ordered_ids)}",
+            f"brutpod: GPU gebucht!\nPod {pod.get('name')} ({pod.get('id')})\nGPU: {gpu_type}",
         )
 
-    except requests.HTTPError as e:
-        err = f"HTTP {e.response.status_code}: {e.response.text[:300]}"
-        with _lock:
-            s = load_state()
-            s["status"]["last_error"] = err
-            add_log(s, f"✗ {err}")
-            save_state(s)
+    except ApiError as e:
+        _fail(str(e), fatal=e.fatal)
     except Exception as e:
-        with _lock:
-            s = load_state()
-            s["status"]["last_error"] = str(e)[:300]
-            add_log(s, f"✗ {e}")
-            save_state(s)
+        _fail(str(e))
+
+
+def _fail(msg: str, fatal: bool = False) -> None:
+    """Record an error; stop polling when retrying it cannot help."""
+    with _lock:
+        s = load_state()
+        s["status"]["last_error"] = msg[:300]
+        add_log(s, f"✗ {msg}")
+        if fatal:
+            s["status"]["running"] = False
+            add_log(s, "Gestoppt — Konfiguration oder Account prüfen")
+        save_state(s)
+    if fatal:
+        _stop_event.set()
 
 
 def _polling_loop() -> None:
@@ -322,8 +404,10 @@ async def index(request: Request):
 @app.post("/config", response_class=HTMLResponse)
 async def save_config(
     api_key: str = Form(""),
-    gpu_types: str = Form(""),
+    gpu_type: str = Form(""),
+    min_ram_per_gpu: int = Form(0),
     template: str = Form(""),
+    env: str = Form(""),
     cloud: str = Form("SECURE"),
     gpu_count: int = Form(1),
     cuda: str = Form(""),
@@ -337,12 +421,19 @@ async def save_config(
     pushover_token: str = Form(""),
     pushover_user: str = Form(""),
 ):
+    try:
+        parse_env(env)
+    except ValueError as e:
+        return HTMLResponse(f'<span class="saved error">✗ ENV: {e}</span>')
+
     with _lock:
         state = load_state()
         state["config"].update({
             "api_key": api_key,
-            "gpu_types": gpu_types,
+            "gpu_type": gpu_type,
+            "min_ram_per_gpu": min_ram_per_gpu,
             "template": template,
+            "env": env,
             "cloud": cloud,
             "gpu_count": gpu_count,
             "cuda": cuda,
@@ -370,31 +461,19 @@ async def api_gpu_types():
         return HTMLResponse('<span class="api-hint">— API Key nicht gesetzt —</span>')
 
     try:
-        query = "{ gpuTypes { id displayName memoryInGb secureCloud communityCloud } }"
-        resp = requests.post(
-            GRAPHQL_URL,
-            json={"query": query},
-            headers={"Authorization": f"Bearer {api_key}"},
-            timeout=15,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-        if "errors" in data:
-            raise RuntimeError(data["errors"])
-
-        gpus = data["data"]["gpuTypes"]
-        gpus = [g for g in gpus if g.get("secureCloud") or g.get("communityCloud")]
-        gpus.sort(key=lambda g: g.get("displayName", ""))
+        data = api_request("GET", "/catalog/gpus", api_key, {})
+        gpus = [g for g in data["gpus"] if g.get("secure") or g.get("community")]
+        gpus.sort(key=lambda g: g.get("name", ""))
 
         chips = []
         for g in gpus:
-            clouds = ("S" if g.get("secureCloud") else "") + ("C" if g.get("communityCloud") else "")
-            mem = g.get("memoryInGb", "?")
+            clouds = ("S" if g.get("secure") else "") + ("C" if g.get("community") else "")
+            mem = g.get("memory", "?")
             gid = g["id"].replace("'", "\\'")
             chips.append(
                 f'<button type="button" class="gpu-chip" '
-                f'onclick="addGpuType(\'{gid}\')" title="{g["id"]}">'
-                f'{g["displayName"]} <span class="gpu-chip-meta">{mem}GB {clouds}</span>'
+                f'onclick="setGpuType(\'{gid}\')" title="{g["id"]}">'
+                f'{g["name"]} <span class="gpu-chip-meta">{mem}GB VRAM {clouds}</span>'
                 f'</button>'
             )
         return HTMLResponse('<div class="gpu-chips">' + "\n".join(chips) + "</div>")
@@ -412,15 +491,10 @@ async def api_templates():
         return HTMLResponse('<option value="">— API Key nicht gesetzt —</option>')
 
     try:
-        resp = requests.get(
-            f"{REST_URL}/templates",
-            headers={"Authorization": f"Bearer {api_key}"},
-            timeout=15,
-        )
-        resp.raise_for_status()
-        items = resp.json()
-    except requests.HTTPError as e:
-        return HTMLResponse(f'<option value="">HTTP {e.response.status_code}: {e.response.text[:80]}</option>')
+        items = [t for t in api_request("GET", "/templates", api_key, {})["templates"]
+                 if not t.get("serverless")]
+    except ApiError as e:
+        return HTMLResponse(f'<option value="">HTTP {e.status} — {e.detail[:80]}</option>')
     except Exception as e:
         return HTMLResponse(f'<option value="">Fehler: {str(e)[:80]}</option>')
 
@@ -430,7 +504,7 @@ async def api_templates():
     for t in sorted(items, key=lambda x: (x.get("name") or "").lower()):
         tid = t.get("id", "")
         name = t.get("name") or tid
-        image = t.get("imageName") or ""
+        image = t.get("image") or ""
         sel = " selected" if tid == current else ""
         if tid == current:
             found = True

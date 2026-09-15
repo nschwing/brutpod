@@ -79,6 +79,7 @@
     input[type="password"],
     input[type="number"],
     input[type="time"],
+    textarea,
     select {
       width: 100%;
       background: var(--surface);
@@ -92,8 +93,9 @@
       transition: border-color 0.12s;
       -webkit-appearance: none;
     }
-    input:focus, select:focus { border-color: var(--accent); }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
     select { cursor: pointer; }
+    textarea { resize: vertical; min-height: 64px; font-family: ui-monospace, monospace; }
 
     .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
@@ -129,6 +131,7 @@
     .btn-danger:hover { border-color: var(--error) !important; color: var(--error) !important; }
 
     .saved { color: var(--success); font-size: 12px; }
+    .saved.error { color: var(--error); }
 
     /* ---- Status panel ---- */
     #status-panel { height: 100%; display: flex; flex-direction: column; gap: 14px; }
@@ -245,9 +248,9 @@
         </div>
 
         <div class="field">
-          <label>GPU Types — kommagetrennt, Prioritätsreihenfolge</label>
-          <input type="text" id="gpu-types-input" name="gpu_types" value="{{ state.config.gpu_types }}"
-                 placeholder="NVIDIA GeForce RTX 4090, NVIDIA RTX A6000">
+          <label>GPU Type</label>
+          <input type="text" id="gpu-type-input" name="gpu_type" value="{{ state.config.gpu_type }}"
+                 placeholder="NVIDIA GeForce RTX 4090">
           <div id="gpu-type-list"
             hx-get="/api/gpu-types"
             hx-trigger="load"
@@ -272,6 +275,11 @@
         </div>
 
         <div class="field">
+          <label>Min. RAM pro GPU (GB) <span style="color:var(--muted2)">— Host-RAM, nicht VRAM; 0 = egal</span></label>
+          <input type="number" name="min_ram_per_gpu" value="{{ state.config.min_ram_per_gpu }}" min="0">
+        </div>
+
+        <div class="field">
           <label style="display:flex;align-items:center;justify-content:space-between">
             <span>Template <span style="color:var(--muted2)">(optional)</span></span>
             <button type="button" class="btn-icon"
@@ -291,6 +299,15 @@
         </div>
 
         <div class="field">
+          {% raw %}
+          <label>ENV Overrides — KEY=VALUE pro Zeile, wird pro Key ins Template gemerged.
+            Secrets als <code>{{ RUNPOD_SECRET_name }}</code></label>
+          {% endraw %}
+          <textarea name="env" rows="4"
+                    placeholder="HF_TOKEN={{ '{{' }} RUNPOD_SECRET_hf_token {{ '}}' }}&#10;JUPYTER_PASSWORD=hunter2">{{ state.config.env }}</textarea>
+        </div>
+
+        <div class="field">
           <label>CUDA Versionen — kommagetrennt, leer = alle</label>
           <input type="text" name="cuda" value="{{ state.config.cuda }}" placeholder="12.8, 12.9">
         </div>
@@ -301,7 +318,7 @@
             <input type="number" name="container_disk" value="{{ state.config.container_disk }}" min="1">
           </div>
           <div class="field">
-            <label>Volume (GB)</label>
+            <label>Volume (GB) <span style="color:var(--muted2)">— min. 10, sonst keins</span></label>
             <input type="number" name="volume" value="{{ state.config.volume }}" min="0">
           </div>
           <div class="field">
@@ -369,30 +386,23 @@
     </div>
   </main>
   <script>
-    function addGpuType(id) {
-      const input = document.getElementById('gpu-types-input');
-      const current = input.value.split(',').map(s => s.trim()).filter(Boolean);
-      if (!current.includes(id)) {
-        current.push(id);
-        input.value = current.join(', ');
-      }
-      // Highlight active chips
+    function highlightGpuChips() {
+      const input = document.getElementById('gpu-type-input');
+      if (!input) return;
+      const value = input.value.trim();
       document.querySelectorAll('.gpu-chip').forEach(btn => {
-        const vals = input.value.split(',').map(s => s.trim());
-        btn.classList.toggle('active', vals.includes(btn.title));
+        btn.classList.toggle('active', btn.title === value);
       });
+    }
+
+    function setGpuType(id) {
+      document.getElementById('gpu-type-input').value = id;
+      highlightGpuChips();
     }
 
     // Sync chip highlight state after HTMX loads the chip list
     document.addEventListener('htmx:afterSwap', function(e) {
-      if (e.detail.target.id === 'gpu-type-list') {
-        const input = document.getElementById('gpu-types-input');
-        if (!input) return;
-        const vals = input.value.split(',').map(s => s.trim());
-        document.querySelectorAll('.gpu-chip').forEach(btn => {
-          btn.classList.toggle('active', vals.includes(btn.title));
-        });
-      }
+      if (e.detail.target.id === 'gpu-type-list') highlightGpuChips();
     });
   </script>
 </body>
