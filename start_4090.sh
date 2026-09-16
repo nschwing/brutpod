@@ -2,7 +2,7 @@
 
 python deploy_runpod.py \
     --api-key KEY \
-    --gpu-types "NVIDIA GeForce RTX 4090" \
+    --gpu-type "NVIDIA GeForce RTX 4090" \
     --template sp4jgeficx \
     --cuda 12.8 \
     --cloud SECURE \

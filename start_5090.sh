@@ -2,7 +2,7 @@
 
 python deploy_runpod.py \
     --api-key KEY \
-    --gpu-types "NVIDIA GeForce RTX 5090" \
+    --gpu-type "NVIDIA GeForce RTX 5090" \
     --template i3owfjxo7a \
     --cuda 12.8 \
     --cloud COMMUNITY \
