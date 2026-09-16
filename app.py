@@ -312,8 +312,7 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     state = load_state()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "state": state,
         "env": env_secrets_present(),
     })
@@ -466,7 +465,7 @@ async def start(request: Request):
     _start_thread()
 
     state = load_state()
-    return templates.TemplateResponse("_status.html", {"request": request, "state": state})
+    return templates.TemplateResponse(request, "_status.html", {"state": state})
 
 
 @app.post("/stop", response_class=HTMLResponse)
@@ -477,10 +476,10 @@ async def stop(request: Request):
         state["status"]["running"] = False
         add_log(state, "Gestoppt")
         save_state(state)
-    return templates.TemplateResponse("_status.html", {"request": request, "state": state})
+    return templates.TemplateResponse(request, "_status.html", {"state": state})
 
 
 @app.get("/status", response_class=HTMLResponse)
 async def status_fragment(request: Request):
     state = load_state()
-    return templates.TemplateResponse("_status.html", {"request": request, "state": state})
+    return templates.TemplateResponse(request, "_status.html", {"state": state})
